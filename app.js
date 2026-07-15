@@ -1,9 +1,11 @@
 (() => {
   "use strict";
 
-  const PRIZES = [668, 688, 708, 728, 748, 768, 788, 828];
+  const PRIZES = [88, 188, 288, 388, 588, 688, 888, 1288];
   const MAX_DRAWS = 3;
-  const STORAGE_KEY = "jinfu-github-pages-v2";
+  const MIN_TOTAL = 2000;
+  const MAX_TOTAL = 2500;
+  const STORAGE_KEY = "jinfu-github-pages-v3";
   const DRAW_BLESSINGS = [
     "金喜入怀，好运常在",
     "福气盈门，喜乐绵长",
@@ -71,6 +73,7 @@
 
   const state = {
     history: [],
+    plan: [],
     rotation: 0,
     spinning: false,
     claimed: false,
@@ -85,6 +88,18 @@
   let activeModal = null;
   let previousOverflow = "";
 
+  const validPlans = [];
+  for (const first of PRIZES) {
+    for (const second of PRIZES) {
+      for (const third of PRIZES) {
+        const total = first + second + third;
+        if (total >= MIN_TOTAL && total <= MAX_TOTAL) {
+          validPlans.push([first, second, third]);
+        }
+      }
+    }
+  }
+
   function formatAmount(amount) {
     return amount.toLocaleString("zh-CN");
   }
@@ -92,17 +107,28 @@
   function sanitizeSaved(raw) {
     try {
       const parsed = raw ? JSON.parse(raw) : null;
-      const history = Array.isArray(parsed?.history)
+      const parsedHistory = Array.isArray(parsed?.history)
         ? parsed.history
             .filter((amount) => Number.isFinite(amount) && PRIZES.includes(amount))
             .slice(0, MAX_DRAWS)
         : [];
+      const plan = Array.isArray(parsed?.plan) && parsed.plan.length === MAX_DRAWS
+        ? parsed.plan.filter((amount) => Number.isFinite(amount) && PRIZES.includes(amount))
+        : [];
+      const planTotal = plan.reduce((sum, amount) => sum + amount, 0);
+      const planIsValid =
+        plan.length === MAX_DRAWS &&
+        planTotal >= MIN_TOTAL &&
+        planTotal <= MAX_TOTAL &&
+        parsedHistory.every((amount, index) => amount === plan[index]);
+      const history = planIsValid ? parsedHistory : [];
       return {
         history,
+        plan: planIsValid ? plan : [],
         claimed: history.length === MAX_DRAWS && parsed?.claimed === true,
       };
     } catch {
-      return { history: [], claimed: false };
+      return { history: [], plan: [], claimed: false };
     }
   }
 
@@ -116,7 +142,10 @@
 
   function writeSaved(history, claimed) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ history, claimed }));
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ history, plan: state.plan, claimed }),
+      );
     } catch {
       // The experience remains usable when browser storage is unavailable.
     }
@@ -125,6 +154,7 @@
   function applySaved(saved) {
     if (!saved) return;
     state.history = [...saved.history];
+    state.plan = [...saved.plan];
     state.claimed = saved.claimed;
     updateUI();
   }
@@ -141,10 +171,18 @@
     elements.liveStatus.textContent = message;
   }
 
-  function pickPrizeIndex() {
+  function secureRandomIndex(length) {
+    const range = 2 ** 32;
+    const limit = Math.floor(range / length) * length;
     const random = new Uint32Array(1);
-    window.crypto.getRandomValues(random);
-    return random[0] % PRIZES.length;
+    do {
+      window.crypto.getRandomValues(random);
+    } while (random[0] >= limit);
+    return random[0] % length;
+  }
+
+  function createDrawPlan() {
+    return [...validPlans[secureRandomIndex(validPlans.length)]];
   }
 
   function buildDecorations() {
@@ -307,20 +345,28 @@
     const storageMatches =
       !saved ||
       (saved.history.length === state.history.length &&
-        saved.history.every((amount, index) => amount === state.history[index]));
+        saved.history.every((amount, index) => amount === state.history[index]) &&
+        saved.plan.length === state.plan.length &&
+        saved.plan.every((amount, index) => amount === state.plan[index]));
     if (!storageMatches && saved) {
       applySaved(saved);
       announce("抽奖记录刚刚更新，请再点击一次抽奖");
       return;
     }
 
-    const prizeIndex = pickPrizeIndex();
+    if (state.plan.length !== MAX_DRAWS) {
+      state.plan = createDrawPlan();
+      writeSaved(state.history, false);
+    }
+
+    const plannedAmount = state.plan[state.history.length];
+    const prizeIndex = PRIZES.indexOf(plannedAmount);
     const segmentAngle = 360 / PRIZES.length;
     const currentModulo = ((state.rotation % 360) + 360) % 360;
     const targetModulo = ((-prizeIndex * segmentAngle) % 360 + 360) % 360;
     const alignment = (targetModulo - currentModulo + 360) % 360;
     const drawNumber = state.history.length + 1;
-    const reservedHistory = [...state.history, PRIZES[prizeIndex]];
+    const reservedHistory = [...state.history, plannedAmount];
 
     writeSaved(reservedHistory, false);
     state.spinning = true;
