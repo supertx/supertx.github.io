@@ -612,6 +612,114 @@ button:focus-visible {
   box-shadow: 0 0 10px 3px #ffc34c;
 }
 
+.celebration-rain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  contain: layout style paint;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.celebration-rain.is-active {
+  visibility: visible;
+}
+
+.celebration-rain::before,
+.celebration-rain::after {
+  position: absolute;
+  content: "";
+  opacity: 0;
+}
+
+.celebration-rain::before {
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 239, 157, 0.66), rgba(246, 174, 48, 0.18) 33%, transparent 66%);
+}
+
+.celebration-rain::after {
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: 145vmax;
+  height: 145vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 226, 128, 0.2) 0 7deg, transparent 7deg 18deg);
+  transform: translate(-50%, -50%);
+}
+
+.celebration-rain.is-active::before {
+  animation: celebration-flash 900ms ease-out both;
+}
+
+.celebration-rain.is-active::after {
+  animation: celebration-rays 2.6s ease-out both;
+}
+
+.fall-treasure {
+  position: absolute;
+  top: -64px;
+  left: var(--left);
+  z-index: 2;
+  display: block;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.celebration-rain.is-active .fall-treasure {
+  animation: treasure-fall var(--duration) cubic-bezier(0.14, 0.58, 0.36, 1) var(--delay) both;
+}
+
+.fall-ingot {
+  width: 42px;
+  height: 25px;
+  border: 2px solid #a65b18;
+  border-radius: 7px 7px 18px 18px;
+  background: linear-gradient(155deg, #fff5ad 0%, #f2bd3e 38%, #c4751e 74%, #854014 100%);
+  box-shadow: 0 7px 10px rgba(80, 28, 4, 0.3), inset 0 2px 2px rgba(255, 251, 190, 0.78);
+}
+
+.fall-ingot::before {
+  position: absolute;
+  top: -9px;
+  left: 8px;
+  width: 22px;
+  height: 18px;
+  border: 2px solid #b46b1e;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 27%, #fffbd0 0 18%, #f2bd43 45%, #b96918 100%);
+  content: "";
+}
+
+.fall-ingot::after {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  width: 28px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 246, 167, 0.58);
+  content: "";
+}
+
+.fall-coin {
+  width: 27px;
+  height: 27px;
+  border: 2px solid #9f5718;
+  border-radius: 50%;
+  background: radial-gradient(circle, #7d3714 0 12%, #ffe68a 14% 28%, #e8a62d 30% 66%, #9e5417 70% 100%);
+  box-shadow: 0 5px 8px rgba(87, 38, 8, 0.32), inset 0 0 0 2px rgba(255, 238, 139, 0.65);
+}
+
+.fall-spark {
+  width: 9px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(#fff8c7, #f3b638 65%, #b5651b);
+  box-shadow: 0 0 12px 3px rgba(255, 205, 74, 0.7);
+}
+
 .draw-progress {
   position: relative;
   z-index: 3;
@@ -881,6 +989,7 @@ button:focus-visible {
 
 .result-dialog {
   position: relative;
+  z-index: 2;
   width: min(100%, 326px);
   padding: 53px 28px 25px;
   border: 1px solid #e0b357;
@@ -892,6 +1001,18 @@ button:focus-visible {
   box-shadow: 0 28px 65px rgba(40, 4, 7, 0.4), inset 0 0 0 4px rgba(255, 250, 230, 0.68);
   text-align: center;
   animation: dialog-pop 470ms cubic-bezier(0.2, 1.35, 0.36, 1) both;
+}
+
+.result-layer.is-jackpot .result-dialog {
+  animation: jackpot-dialog 720ms cubic-bezier(0.16, 1.48, 0.28, 1) both;
+}
+
+.result-layer.is-jackpot .result-amount {
+  animation: jackpot-amount 820ms 260ms cubic-bezier(0.2, 1.45, 0.35, 1) both;
+}
+
+.result-layer.is-jackpot .result-crown {
+  animation: crown-bounce 850ms 170ms cubic-bezier(0.2, 1.5, 0.35, 1) both;
 }
 
 .result-dialog::before,
@@ -1049,6 +1170,7 @@ button:focus-visible {
 
 .packet-dialog {
   position: relative;
+  z-index: 2;
   display: grid;
   width: min(100%, 350px);
   min-height: min(520px, calc(100dvh - 48px));
@@ -1365,6 +1487,44 @@ button:focus-visible {
   16% { opacity: 1; }
   72% { opacity: 1; }
   100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1) rotate(var(--r)); }
+}
+
+@keyframes celebration-flash {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes celebration-rays {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(0.45); }
+  22% { opacity: 0.62; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(32deg) scale(1.08); }
+}
+
+@keyframes treasure-fall {
+  0% { opacity: 0; transform: translate3d(-50%, -80px, 0) rotate(0) scale(var(--scale)); }
+  10% { opacity: 1; }
+  76% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(calc(-50% + var(--drift)), calc(100dvh + 120px), 0) rotate(var(--spin)) scale(var(--scale)); }
+}
+
+@keyframes jackpot-dialog {
+  0% { opacity: 0; transform: translateY(35px) scale(0.58) rotate(-3deg); }
+  58% { opacity: 1; transform: translateY(-8px) scale(1.08) rotate(1deg); }
+  78% { transform: translateY(3px) scale(0.97) rotate(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
+@keyframes jackpot-amount {
+  0% { opacity: 0; transform: scale(0.45) rotate(-7deg); filter: brightness(1); }
+  55% { opacity: 1; transform: scale(1.22) rotate(2deg); filter: brightness(1.35); }
+  100% { opacity: 1; transform: scale(1) rotate(0); filter: brightness(1); }
+}
+
+@keyframes crown-bounce {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-38px) rotate(-14deg) scale(0.55); }
+  62% { opacity: 1; transform: translateX(-50%) translateY(5px) rotate(4deg) scale(1.14); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0) scale(1); }
 }
 
 @keyframes slot-pop {

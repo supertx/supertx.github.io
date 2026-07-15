@@ -42,6 +42,7 @@
     drawButtonTitle: byId("draw-button-title"),
     drawButtonSubtitle: byId("draw-button-subtitle"),
     particleLayer: byId("particle-layer"),
+    celebrationRain: byId("celebration-rain"),
     progress: byId("draw-progress"),
     total: byId("total-amount"),
     claimCard: byId("claim-card"),
@@ -84,6 +85,9 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let spinTimer = null;
   let particleTimer = null;
+  let rainTimer = null;
+  let celebrationFrameOne = null;
+  let celebrationFrameTwo = null;
   let packetTimer = null;
   let activeModal = null;
   let previousOverflow = "";
@@ -220,6 +224,20 @@
       elements.particleLayer.appendChild(particle);
     });
 
+    for (let index = 0; index < 36; index += 1) {
+      const treasure = document.createElement("span");
+      const type = index % 4 === 0 ? "ingot" : index % 4 === 1 ? "coin" : index % 4 === 2 ? "ingot" : "spark";
+      const direction = index % 2 === 0 ? 1 : -1;
+      treasure.className = `fall-treasure fall-${type}`;
+      treasure.style.setProperty("--left", `${(index * 29 + 7) % 100}%`);
+      treasure.style.setProperty("--delay", `${(index * 73) % 920}ms`);
+      treasure.style.setProperty("--duration", `${1900 + ((index * 97) % 900)}ms`);
+      treasure.style.setProperty("--drift", `${direction * (22 + ((index * 41) % 74))}px`);
+      treasure.style.setProperty("--spin", `${direction * (540 + ((index * 113) % 720))}deg`);
+      treasure.style.setProperty("--scale", `${0.72 + ((index * 17) % 44) / 100}`);
+      elements.celebrationRain.appendChild(treasure);
+    }
+
     for (let index = 0; index < 12; index += 1) {
       const ray = document.createElement("i");
       ray.style.transform = `rotate(${index * 30}deg)`;
@@ -307,17 +325,36 @@
       ? "三份喜气已经集齐，红包领奖已解锁"
       : `还可转动 ${remaining} 次金运盘`;
     elements.resultAction.textContent = state.resultIsFinal ? "去领取红包" : "收下喜气";
+    elements.resultModal.classList.remove("is-jackpot");
     showModal(elements.resultModal, elements.resultDialog, elements.resultAction);
+    window.requestAnimationFrame(() => elements.resultModal.classList.add("is-jackpot"));
   }
 
-  function celebrate() {
+  function celebrate(targetModal = elements.resultModal) {
+    if (elements.celebrationRain.parentElement !== targetModal) {
+      targetModal.prepend(elements.celebrationRain);
+    }
     elements.particleLayer.classList.remove("is-active");
-    void elements.particleLayer.offsetWidth;
-    elements.particleLayer.classList.add("is-active");
+    elements.celebrationRain.classList.remove("is-active");
+    if (celebrationFrameOne) window.cancelAnimationFrame(celebrationFrameOne);
+    if (celebrationFrameTwo) window.cancelAnimationFrame(celebrationFrameTwo);
+    celebrationFrameOne = window.requestAnimationFrame(() => {
+      celebrationFrameOne = null;
+      celebrationFrameTwo = window.requestAnimationFrame(() => {
+        celebrationFrameTwo = null;
+        elements.particleLayer.classList.add("is-active");
+        elements.celebrationRain.classList.add("is-active");
+      });
+    });
     if (particleTimer) window.clearTimeout(particleTimer);
     particleTimer = window.setTimeout(
       () => elements.particleLayer.classList.remove("is-active"),
       reducedMotion.matches ? 40 : 2400,
+    );
+    if (rainTimer) window.clearTimeout(rainTimer);
+    rainTimer = window.setTimeout(
+      () => elements.celebrationRain.classList.remove("is-active"),
+      reducedMotion.matches ? 80 : 3900,
     );
   }
 
@@ -335,7 +372,7 @@
         ? `第三次抽中 ${amount} 元，三次抽奖已经完成`
         : `第 ${drawNumber} 次抽中 ${amount} 元`,
     );
-    window.navigator.vibrate?.([45, 35, 80]);
+    if (!reducedMotion.matches) window.navigator.vibrate?.([45, 35, 80]);
   }
 
   function startDraw() {
@@ -410,16 +447,17 @@
     state.packetStage = "opening";
     renderPacket();
     announce("红包正在开启");
-    window.navigator.vibrate?.([35, 30, 35]);
+    if (!reducedMotion.matches) window.navigator.vibrate?.([35, 30, 35]);
     packetTimer = window.setTimeout(() => {
       packetTimer = null;
       state.packetStage = "revealed";
       state.claimed = true;
       writeSaved(state.history, true);
       renderPacket();
+      celebrate(elements.packetModal);
       announce(`红包已开启，累计金额 ${totalAmount()} 元`);
       window.requestAnimationFrame(() => elements.moneyHeading.focus());
-      window.navigator.vibrate?.([60, 30, 100]);
+      if (!reducedMotion.matches) window.navigator.vibrate?.([60, 30, 100]);
     }, reducedMotion.matches ? 80 : 850);
   }
 
@@ -485,7 +523,10 @@
   window.addEventListener("beforeunload", () => {
     if (spinTimer) window.clearTimeout(spinTimer);
     if (particleTimer) window.clearTimeout(particleTimer);
+    if (rainTimer) window.clearTimeout(rainTimer);
     if (packetTimer) window.clearTimeout(packetTimer);
+    if (celebrationFrameOne) window.cancelAnimationFrame(celebrationFrameOne);
+    if (celebrationFrameTwo) window.cancelAnimationFrame(celebrationFrameTwo);
   });
 
   buildDecorations();
