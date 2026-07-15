@@ -1,9 +1,9 @@
 (() => {
   "use strict";
 
-  const PRIZES = [188, 288, 388, 588, 688, 888, 1288, 1688];
+  const PRIZES = [668, 688, 708, 728, 748, 768, 788, 828];
   const MAX_DRAWS = 3;
-  const STORAGE_KEY = "jinfu-github-pages-v1";
+  const STORAGE_KEY = "jinfu-github-pages-v2";
   const DRAW_BLESSINGS = [
     "金喜入怀，好运常在",
     "福气盈门，喜乐绵长",
